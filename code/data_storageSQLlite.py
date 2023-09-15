@@ -13,8 +13,8 @@ Base = declarative_base()
 class Camera(Base):
     _tablename__ = 'cameras'
 
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
+
+    name = Column(String, primary_key=True)
     guid = Column(String)
     angle = Column(Float)
     datetime = Column(String)  # Подставьте нужный тип данных
@@ -33,7 +33,7 @@ class Keypoint(Base):
     __tablename__ = 'keypoints'
 
     id = Column(Integer, primary_key=True)
-    camera_id = Column(Integer, ForeignKey('cameras.id'))
+    camera_name = Column(Integer, ForeignKey('cameras.name'))
     x = Column(Float)
     y = Column(Float)
     size = Column(Float)
@@ -69,7 +69,7 @@ def database_entry(cameras):
                 camera.generations_max = camera_data['generations_max']
 
                 # Удаляем старые ключевые точки этой камеры
-                session.query(Keypoint).filter_by(camera_id=camera.id).delete()
+                session.query(Keypoint).filter_by(camera_name=camera.name).delete()
 
                 # Добавляем новые ключевые точки
                 for keypoint_data in camera_data['keypoints']:
@@ -99,7 +99,7 @@ def read_from_database():
 
     # Для каждой камеры считываем соответствующие ключевые точки
     for camera in cameras:
-        keypoints = session.query(Keypoint).filter_by(camera_id=camera.id).all()
+        keypoints = session.query(Keypoint).filter_by(camera_name=camera.name).all()
         camera.old = keypoints
 
     session.close()
@@ -132,4 +132,48 @@ def update_guides_in_bd(guids_dict):
         print(f"Ошибка при обновлении/добавлении камер: {e}")
     finally:
         # Закрываем сессию
+        session.close()
+
+# Функция для создания таблиц в базе данных
+def create_tables():
+    Base.metadata.create_all(engine)
+
+# Функция для добавления начальных данных (первичное заполнение)
+def add_initial_data(cameras):
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    try:
+        for camera_data in cameras:
+            camera = Camera(name=camera_data['name'],
+                            guid=camera_data['guid'],
+                            angle=camera_data['angle'],
+                            datetime=camera_data['datetime'],
+                            keypoint_count=camera_data['keypoint_count'],
+                            generations_count=camera_data['generations_count'],
+                            generations_max=camera_data['generations_max'])
+            session.add(camera)
+            session.flush()
+
+            for keypoint_data in camera_data['keypoints']:
+                keypoint = Keypoint(camera_name=camera_data['name'],
+                                    x=keypoint_data['x'],
+                                    y=keypoint_data['y'],
+                                    size=keypoint_data['size'],
+                                    angle=keypoint_data['angle'],
+                                    response=keypoint_data['response'],
+                                    octave=keypoint_data['octave'],
+                                    fitness=keypoint_data['fitness'],
+                                    number_of_generations=keypoint_data['number_of_generations'],
+                                    distance=keypoint_data['distance'],
+                                    avg_distance=keypoint_data['avg_distance'],
+                                    step=keypoint_data['step'],
+                                    descriptor=keypoint_data['descriptor'])
+                session.add(keypoint)
+
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        print(f"Ошибка при записи в базу данных: {e}")
+    finally:
         session.close()

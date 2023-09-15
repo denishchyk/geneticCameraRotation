@@ -1,5 +1,8 @@
 import time
+from typing import List
+
 import cv2
+import datetime as datetime
 import numpy as np
 import requests
 
@@ -49,11 +52,37 @@ def one_camera(camera):
 
 class Camera:
     def __init__(self,
-                 name, guid,  datetime,
-                 angle = 0,
-                 keypoint_count = 0, generations_count = 0, generations_max = 0,
-                 old = []
+                 name: str,  # Наименование камеры (строка)
+                 guid: str,  # Уникальный идентификатор камеры (строка)
+                 datetime: datetime,  # Дата и время записи (объект datetime)
+                 angle: float = 0.0,  # Угол камеры (число с плавающей точкой)
+                 keypoint_count: int = 0,  # Количество ключевых точек (целое число)
+                 generations_count: int = 0,  # Количество поколений (целое число)
+                 generations_max: int = 0,  # Максимальное количество поколений (целое число)
+                 old: List[genetics.KC] = [],  # Список ключевых точек (список объектов)
+                 status_code: bool = True,  # Код состояния (True - 200, False - != 200)
+                 content_type: bool = True,  # Тип контента (True - изображение, False - не изображение)
+                 turn: bool = True  # Статус включения (True - статичное состояние, False - поворот)
                  ):
+
+        """
+        Класс представляет камеру и её характеристики.
+
+        :param name: Наименование камеры.
+        :param guid: Уникальный идентификатор камеры.
+        :param datetime: Дата и время записи.
+        :param angle: Угол камеры (по умолчанию 0.0).
+        :param keypoint_count: Количество ключевых точек (по умолчанию 0).
+        :param generations_count: Количество поколений (по умолчанию 0).
+        :param generations_max: Максимальное количество поколений (по умолчанию 0).
+        :param old: Список ключевых точек (по умолчанию пустой список).
+                    Объект клюжчевая точка хранится в отдельной таблице в базе данных
+                    и соединяется по ключу, которым является имя камеры.
+        :param status_code: Код состояния (по умолчанию True - активно).
+        :param content_type: Тип контента (по умолчанию True - изображение).
+        :param turn: Статус включения (по умолчанию True - включено).
+        """
+
         self.name = name
         self.guid = guid
         self.angle = angle
@@ -61,12 +90,13 @@ class Camera:
         self.keypoint_count = keypoint_count
         self.generations_count = generations_count
         self.generations_max = generations_max
-        self.old = old  # Массив ключевых точек по ключу из другой таблицы
-        self.status_code = True
-        self.content_type = True
-        self.turn = True
+        self.old = old
+        self.status_code = status_code
+        self.content_type = content_type
+        self.turn = turn
 
-cameras = data_storage.read_from_database()
+
+cameras = data_storageSQLlite.read_from_database()
 
 
 flag = False #Флаг проверяет что трассир имеет актуальные гуиды
@@ -79,7 +109,7 @@ while True:
                     flag = False
                     break
 
-            data_storage.database_entry(cameras)
+            data_storageSQLlite.database_entry(cameras)
             print("все камеры")
             if flag: time.sleep(10)
         else:

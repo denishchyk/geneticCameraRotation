@@ -20,7 +20,7 @@ cv.KeyPoint(x=100, y=50, _size=10, _angle=45, _response=0.8, _octave=2)
     class_id: Идентификатор класса (некоторые версии OpenCV могут иметь это поле).
 
 my_database.db keypoints
-    1   camera_id
+    1   camera_name
         KeyPoint
     2       id : class_id
     3       x  : pt[0]
