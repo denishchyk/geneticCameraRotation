@@ -6,7 +6,7 @@ import requests
 import Private_setting
 import angle_of_rotation
 import genetics
-import data_storage
+import data_storageSQLlite
 import tg_bot
 from img import save_image
 
