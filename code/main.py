@@ -55,11 +55,12 @@ class Camera:
                  name: str,  # Наименование камеры (строка)
                  guid: str,  # Уникальный идентификатор камеры (строка)
                  datetime: datetime,  # Дата и время записи (объект datetime)
+                 old: List[genetics.KC] = [],  # Список ключевых точек (список объектов)
                  angle: float = 0.0,  # Угол камеры (число с плавающей точкой)
                  keypoint_count: int = 0,  # Количество ключевых точек (целое число)
                  generations_count: int = 0,  # Количество поколений (целое число)
                  generations_max: int = 0,  # Максимальное количество поколений (целое число)
-                 old: List[genetics.KC] = [],  # Список ключевых точек (список объектов)
+
                  status_code: bool = True,  # Код состояния (True - 200, False - != 200)
                  content_type: bool = True,  # Тип контента (True - изображение, False - не изображение)
                  turn: bool = True  # Статус включения (True - статичное состояние, False - поворот)
