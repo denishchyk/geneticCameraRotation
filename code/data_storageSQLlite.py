@@ -1,7 +1,14 @@
+from typing import List
+
+import cv2
+import datetime as datetime
+import numpy as np
 from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Float
 from sqlalchemy.orm import sessionmaker, relationship, DeclarativeBase
 
 from Private_setting import bd_name
+from code.genetics import KC
+
 
 # Создаем подключение к базе данных SQLite
 engine = create_engine(f'sqlite:///{bd_name}.db')
@@ -77,7 +84,51 @@ class ORM_Keypoint(Base):
         self.avg_distance = avg_distance
         self.step = step
         self.descriptor = descriptor
+class Camera:
+    def __init__(self,
+                 name: str,  # Наименование камеры (строка)
+                 guid: str,  # Уникальный идентификатор камеры (строка)
+                 datetime: datetime,  # Дата и время записи (объект datetime)
+                 old: List[KC] = [],  # Список ключевых точек (список объектов)
+                 angle: float = 0.0,  # Угол камеры (число с плавающей точкой)
+                 keypoint_count: int = 0,  # Количество ключевых точек (целое число)
+                 generations_count: int = 0,  # Количество поколений (целое число)
+                 generations_max: int = 0,  # Максимальное количество поколений (целое число)
 
+                 status_code: bool = True,  # Код состояния (True - 200, False - != 200)
+                 content_type: bool = True,  # Тип контента (True - изображение, False - не изображение)
+                 turn: bool = True  # Статус включения (True - статичное состояние, False - поворот)
+                 ):
+
+        """
+        Класс представляет камеру и её характеристики.
+
+        :param name: Наименование камеры.
+        :param guid: Уникальный идентификатор камеры.
+        :param datetime: Дата и время записи.
+        :param angle: Угол камеры (по умолчанию 0.0).
+        :param keypoint_count: Количество ключевых точек (по умолчанию 0).
+        :param generations_count: Количество поколений (по умолчанию 0).
+        :param generations_max: Максимальное количество поколений (по умолчанию 0).
+        :param old: Список ключевых точек (по умолчанию пустой список).
+                    Объект клюжчевая точка хранится в отдельной таблице в базе данных
+                    и соединяется по ключу, которым является имя камеры.
+        :param status_code: Код состояния (по умолчанию True - активно).
+        :param content_type: Тип контента (по умолчанию True - изображение).
+        :param turn: Статус включения (по умолчанию True - включено).
+        """
+
+        self.name = name
+        self.guid = guid
+        self.angle = angle
+        self.datetime = datetime
+        self.keypoint_count = keypoint_count
+        self.generations_count = generations_count
+        self.generations_max = generations_max
+        self.old = old
+        self.status_code = status_code
+        self.content_type = content_type
+        self.turn = turn
 
 def database_entry(cameras):
     Session = sessionmaker(bind=engine)
@@ -140,13 +191,37 @@ def read_from_database():
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    # Считываем все камеры в базе данных
-    cameras = session.query(ORM_Camera).all()
+    # Получить все записи из таблицы ORM_Camera
+    camera_records = session.query(ORM_Camera).all()
+    cameras = []
+    for camera_record in camera_records:
+        camera = Camera(
+            name=camera_record.name,
+            guid=camera_record.guid,
+            datetime=camera_record.datetime,
+            angle=camera_record.angle,
+            keypoint_count=camera_record.keypoint_count,
+            generations_count=camera_record.generations_count,
+            generations_max=camera_record.generations_max
+        )
+        # Добавить созданный объект Camera в список cameras
+        cameras.append(camera)
 
     # Для каждой камеры считываем соответствующие ключевые точки
     for camera in cameras:
         keypoints = session.query(ORM_Keypoint).filter_by(camera_name=camera.name).all()
-        camera.old = keypoints
+        for keypoint in keypoints:
+            descriptor = np.frombuffer(keypoint.descriptor, dtype=np.float32)
+            camera.old.append(KC(
+                KeyPoint=cv2.KeyPoint(keypoint.x, keypoint.y, keypoint.size, keypoint.angle, keypoint.response,
+                                      keypoint.octave, keypoint.id),
+                descriptor=descriptor,
+                fitness=keypoint.fitness,
+                number_of_generations=keypoint.number_of_generations,
+                distance=keypoint.distance,
+                avg_distance=keypoint.avg_distance,
+                step=keypoint.step
+            ))
 
     session.close()
 
