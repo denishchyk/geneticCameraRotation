@@ -1,10 +1,7 @@
-import json
 import time
 import cv2
 import numpy as np
 import requests
-from datetime import datetime
-import os
 
 import Private_setting
 import angle_of_rotation
@@ -31,8 +28,9 @@ def one_camera(camera):
         yang = genetics.STEP1_initialize_population_from_frame(image)
 
         # TODO модуль детекции переписать
-        matches = genetics.STEP2_wedding(camera.old,yang)
-        camera.angle = abs(angle_of_rotation.calculate_rotation_angle(camera.old, yang, matches)) if camera.keypoint_count > 0 else 0
+        matches = genetics.STEP2_wedding(camera.old, yang)
+        camera.angle = abs(
+            angle_of_rotation.calculate_rotation_angle(camera.old, yang, matches)) if camera.keypoint_count > 0 else 0
         camera.turn = camera.angle < Private_setting.threshold
         if camera.turn:
             next_generation = genetics.STEP3_crossover(yang, camera.old, matches) + genetics.STEP4_selection(yang, matches)
@@ -63,7 +61,7 @@ class Camera:
         self.keypoint_count = keypoint_count
         self.generations_count = generations_count
         self.generations_max = generations_max
-        self.old = old
+        self.old = old  # Массив ключевых точек по ключу из другой таблицы
         self.status_code = True
         self.content_type = True
         self.turn = True
