@@ -1,5 +1,8 @@
 import os
 
+import cv2
+import numpy as np
+
 
 def save_image(image_data, directory, filename):
     """
@@ -24,3 +27,6 @@ def save_image(image_data, directory, filename):
 
     except Exception as e:
         print(f"Ошибка при сохранении изображения: {e}")
+
+def img_to_frame(img):
+    return  cv2.imdecode(np.frombuffer(img, np.uint8), cv2.IMREAD_COLOR)

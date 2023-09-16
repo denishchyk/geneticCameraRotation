@@ -7,7 +7,7 @@ from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Float
 from sqlalchemy.orm import sessionmaker, relationship, DeclarativeBase
 
 from Private_setting import bd_name
-from code.genetics import KC
+from code.rotate.genetics import KC
 
 
 # Создаем подключение к базе данных SQLite
