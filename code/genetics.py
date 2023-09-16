@@ -178,17 +178,28 @@ def STEP2_wedding(old, yang):
     return bf.knnMatch(descriptors_old, descriptors_yang, k=1)  # Вычисление всех матчей
 
 def STEP3_crossover(yang, old, matches):
+    """
+       Функция для выполнения шага 3 (скрещивания) в генетическом алгоритме.
+
+       :param yang: Список молодых особей (объектов класса KC)
+       :param old: Список старых особей (объектов класса KC)
+       :param matches: Список матчей между молодыми и старыми особями
+       :return: Обновленный список старых особей после скрещивания
+       """
     global global_c
-    selected_matches = [match for match in matches if
-                        match[0].distance <= global_c]  # Фильтрация матчей с расстоянием менее
+
+    # Фильтрация матчей с расстоянием менее global_c
+    selected_matches = [match for match in matches if match[0].distance <= global_c]
 
     # Создание массива партнеров для скрещивания и заполнение -1, размерность = размерности previous_generation
     partners = [(-1, float("inf"))] * len(old)
+
     # Присваивание партнеров для скрещивания
     for match in selected_matches:
         if match[0].distance < partners[match[0].queryIdx][1]:
             partners[match[0].queryIdx] = (match[0].trainIdx, match[0].distance)
 
+    # Обновление данных старых особей на основе партнеров и матчей
     for i, (j, d) in enumerate(partners):
         if j > -1:
             if not old[i].distance:
@@ -196,7 +207,7 @@ def STEP3_crossover(yang, old, matches):
             old[i].fitness += 10 / (d + 1)
             old[i].distance = d
             old[i].avg_distance = (old[i].avg_distance * old[i].number_of_generations + d) / (
-                        old[i].number_of_generations + 1)
+                    old[i].number_of_generations + 1)
             old[i].number_of_generations += 1
 
             if random.randint(0, 1):
@@ -204,15 +215,21 @@ def STEP3_crossover(yang, old, matches):
                 old[i].KeyPoint = yang[j].KeyPoint
                 old[i].KeyPoint.class_id = id
 
-    # Сортируем массив по значению fitness в убывающем порядке
+    # Сортировка массива старых особей по значению fitness в убывающем порядке
     old_thoroughbred = sorted(old, key=lambda x: x.number_of_generations, reverse=True)
-    for x in old_thoroughbred[:30]: x.fitness += 1
 
+    # Увеличение fitness лучших особей
+    for x in old_thoroughbred[:30]:
+        x.fitness += 1
+
+    # Сортировка оставшихся старых особей по fitness
     old = sorted(old_thoroughbred[30:], key=lambda x: x.fitness, reverse=True)
 
+    # Выбор случайных мутантов и перемешивание
     old_mutants = old[400:]
     random.shuffle(old_mutants)
 
+    # Возвращение обновленного списка старых особей
     return old[:400] + old_thoroughbred[:30] + old_mutants[:50]
 
 def STEP4_selection(yang, matches):
