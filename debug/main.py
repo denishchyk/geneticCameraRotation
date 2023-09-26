@@ -8,19 +8,19 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import update
 from sqlalchemy.orm import sessionmaker
 import asyncio
-
-# Создание базового класса моделей для SQLAlchemy
-Base = declarative_base()
-
-# Определение модели для таблицы statys
-class Statys(Base):
-    __tablename__ = 'statys'
-    name = Column(String, primary_key=True)
-    flag = Column(Integer)
+from debug.bd_function import Statys
+# # Создание базового класса моделей для SQLAlchemy
+# Base = declarative_base()
+#
+# # Определение модели для таблицы statys
+# class Statys(Base):
+#     __tablename__ = 'statys'
+#     name = Column(String, primary_key=True)
+#     flag = Column(Integer)
 
 # Создание подключения к базе данных
 engine = create_engine(F'sqlite:///{DB_FILE}.db')
-Base.metadata.create_all(engine)
+# Base.metadata.create_all(engine)
 
 # Создание сессии SQLAlchemy
 Session = sessionmaker(bind=engine)
@@ -30,6 +30,7 @@ session = Session()
 def update_password_status(session: Session, new_status: int):
     try:
         # Ищем запись с именем 'password' и обновляем флаг
+
         session.query(Statys).filter_by(name='password').update({'flag': new_status})
         session.commit()
         print("Статус пароля обновлен успешно.")
@@ -39,6 +40,7 @@ def update_password_status(session: Session, new_status: int):
 
 # Функция для обновления статуса GUID
 def update_guid_status(session: Session, new_status: int):
+
     try:
         # Ищем запись с именем 'guid' и обновляем флаг
         session.query(Statys).filter_by(name='guid').update({'flag': new_status})
