@@ -1,55 +1,69 @@
-from Private_setting import tg_token
+from Private_setting import chat_id_masha
+CHAT_ID = chat_id_masha
+DB_FILE = 'it_could_be_MySQL.db'
 
 import asyncio
 import logging
-import sys
-from os import getenv
+from datetime import datetime, timedelta
+import sqlite3
 
-from aiogram import Bot, Dispatcher, Router, types
-from aiogram.enums import ParseMode
-from aiogram.filters import CommandStart
-from aiogram.types import Message
-from aiogram.utils.markdown import hbold
+from aiogram import Bot, Dispatcher, types, html, F
 
-# Токен бота можно получить через https://t.me/BotFather
-TOKEN = tg_token
 
-# Создаем экземпляр Dispatcher (Диспетчер) для управления обработчиками событий
+from config_reader import config
+
+bot = Bot(token=config.bot_token.get_secret_value(), parse_mode="HTML")
 dp = Dispatcher()
+logging.basicConfig(level=logging.INFO)
 
-def tell_the_bot():
-    pass
+def get_recent_events():
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
 
-# Обработчик для команды /start
-@dp.message(CommandStart())
-async def command_start_handler(message: Message) -> None:
-    """
-    Этот обработчик получает сообщения с командой /start
-    """
-    # Метод answer позволяет отправить сообщение в ответ на полученное сообщение
-    await message.answer(f"Привет, {hbold(message.from_user.full_name)}!")
+    # Вычисляем время, за которое нужно получить события
+    now = datetime.now()
+    five_minutes_ago = now - timedelta(minutes=15)
+    # Запрос к базе данных для получения событий за последние 5 минут
+    cursor.execute('SELECT name, datetime FROM event WHERE datetime >= ?', (five_minutes_ago,))
+    recent_events = cursor.fetchall()
 
-# Обработчик для всех остальных сообщений
-@dp.message()
-async def echo_handler(message: types.Message) -> None:
-    """
-    Обработчик отправит полученное сообщение обратно отправителю
+    conn.close()
+    return recent_events
+@dp.message(F.text)
+async def echo_with_time(message: types.Message):
+    # Получаем текущее время в часовом поясе ПК
+    time_now = datetime.now().strftime('%H:%M')
+    # Создаём подчёркнутый текст
+    added_text = html.underline(f"Создано в {time_now}")
+    # Отправляем новое сообщение с добавленным текстом
+    await message.answer(f"{message.html_text}\n\n{added_text}")
 
-    По умолчанию, обработчик сообщений будет обрабатывать все типы сообщений (текст, фото, стикер и др.)
-    """
-    try:
-        # Отправляем копию полученного сообщения
-        await message.send_copy(chat_id=message.chat.id)
-    except TypeError:
-        # Не все типы сообщений поддерживают копирование, поэтому обрабатываем исключение
-        await message.answer("Попробуйте еще раз!")
 
-async def main() -> None:
-    # Инициализируем экземпляр бота с указанием режима разбора сообщений (ParseMode)
-    bot = Bot(TOKEN, parse_mode=ParseMode.HTML)
-    # Запускаем обработку событий с использованием Dispatcher
+# Function to send the current time
+async def send_current_time():
+    while True:
+        try:
+            # Получаем последние события
+            recent_events = get_recent_events()
+            message = ""
+            for event in recent_events:
+                event_name, event_datetime = event
+                message += f"Событие: {event_name}\tВремя: {event_datetime}\n"
+
+            await bot.send_message(chat_id=CHAT_ID, text=message)
+
+            await asyncio.sleep(10)  # Send the time every minute
+        except Exception as e:
+            logging.error(str(e))
+
+
+
+async def main():
+    # Start the message sending task
+    asyncio.create_task(send_current_time())
+    await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
+
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     asyncio.run(main())
