@@ -1,5 +1,5 @@
 from datetime import datetime
-
+import concurrent.futures
 from Private_setting import bd_name
 
 DB_FILE = bd_name
@@ -62,27 +62,63 @@ async def all_camera(session, cameras):
 
     from debug.rotate.main import one_step
     time_d = datetime.now()
-    for i in range(len(cameras)):
+    # Разбиваем камеры на группы по 10
+    camera_groups = [cameras[i:i + 10] for i in range(0, len(cameras), 10)]
 
-        cameras[i] = one_step(cameras[i])
-        if not cameras[i].turn:
-            new_event = ORM_Event(
-                name="Поворот" + cameras[i].name,
-                datetime=datetime.now(),  # .strftime('%Y-%m-%d %H:%M:%S'),
-                enabled=1  # Здесь 1 означает, что событие включено
-            )
+    # Определяем оставшиеся камеры
+    remaining_cameras = cameras[len(camera_groups) * 10:]
+    def update_camera_data(time_d,cameras):
+        results, ewent  = [], []
+        for i in range(len(cameras)):
 
-            # Добавьте объект события в сессию и сделайте commit
-            session.add(new_event)
-            session.commit()
-        time_difference = datetime.now() - time_d
-        # Извлекаем количество часов, минут и секунд из разницы во времени
-        hours, remainder = divmod(time_difference.total_seconds(), 3600)  # 3600 секунд в часе
-        minutes, seconds = divmod(remainder, 60)
-        print(cameras[i].name, f"Количество minut: {int(minutes)} seconds: {int(seconds)}")
+            cameras[i] = one_step(cameras[i])
+            if not cameras[i].turn:
+                new_event = ORM_Event(
+                    name="Поворот" + cameras[i].name,
+                    datetime=datetime.now(),  # .strftime('%Y-%m-%d %H:%M:%S'),
+                    enabled=1  # Здесь 1 означает, что событие включено
+                )
+
+                # Добавьте объект события в сессию и сделайте commit
+                ewent.append(new_event)
+
+            time_difference = datetime.now() - time_d
+            # Извлекаем количество часов, минут и секунд из разницы во времени
+            hours, remainder = divmod(time_difference.total_seconds(), 3600)  # 3600 секунд в часе
+            minutes, seconds = divmod(remainder, 60)
+            print(cameras[i].name, f"Количество minut: {int(minutes)} seconds: {int(seconds)}")
+            results.append(cameras[i])
+        return (results, ewent)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        all_results = []
+        time_d = datetime.now()
+        # Запускаем потоки для каждой группы камер
+        for camera_group in camera_groups:
+            future = executor.submit(update_camera_data,time_d, camera_group)
+            all_results.append(future)
+
+        # Запускаем потоки для оставшихся камер
+        if remaining_cameras:
+            future = executor.submit(update_camera_data,time_d, remaining_cameras)
+            all_results.append(future)
+
+        # Ждем завершения всех потоков и получаем результаты
+        combined_results = []
+        for future in concurrent.futures.as_completed(all_results):
+            combined_results.extend(future.result())
+
+
 
     # for status_name, update_function in status_functions.items():
     #     update_function(session,random.randint(0, 1))
+    # print(combined_results)
+    results  = combined_results[0]
+    ewent = combined_results[1]
+    cameras = results
+    for e in ewent:
+        session.add(e)
+    session.commit()
     database_entry(cameras)
     time_difference = datetime.now() - time_d
     # Извлекаем количество часов, минут и секунд из разницы во времени

@@ -9,6 +9,7 @@ def one_step(camera):
         save_image(img, "./images/", camera.name )
         from debug.rotate import genetics
         from debug.img import img_to_frame
+
         yang = genetics.STEP1_initialize_population_from_frame(img_to_frame(img))
 
         # TODO модуль детекции переписать
@@ -26,7 +27,7 @@ def one_step(camera):
 
         else:
 
-            next_generation = genetics.STEP3_crossover(yang, camera.old, matches) + genetics.STEP4_selection(yang,                                                                                                 matches)
+            next_generation = genetics.STEP3_crossover(yang, camera.old, matches) + genetics.STEP4_selection(yang,matches)
             camera.old = [chromosome for chromosome in next_generation if chromosome.fitness > 1]
             (print("((((("))
         for i in camera.old:
