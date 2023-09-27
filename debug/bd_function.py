@@ -188,3 +188,4 @@ def database_entry(cameras):
     finally:
         # Закрываем сессию
         session.close()
+

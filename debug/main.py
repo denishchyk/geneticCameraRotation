@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from Private_setting import bd_name
 
 DB_FILE = bd_name
@@ -8,7 +10,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import update
 from sqlalchemy.orm import sessionmaker
 import asyncio
-from debug.bd_function import ORM_Statys, database_entry
+from debug.bd_function import ORM_Statys, database_entry, ORM_Event
 from debug.bd_function import read_from_database
 # # Создание базового класса моделей для SQLAlchemy
 # Base = declarative_base()
@@ -59,18 +61,35 @@ status_functions = {
 async def all_camera(session, cameras):
 
     from debug.rotate.main import one_step
+    time_d = datetime.now()
     for i in range(len(cameras)):
-        cameras[i] = one_step(cameras[i])
-        if not cameras[i].content_type:
-            print("cameras[i].content_type")
 
-        database_entry(cameras)
-        print("все камеры")
+        cameras[i] = one_step(cameras[i])
+        if not cameras[i].turn:
+            new_event = ORM_Event(
+                name="Поворот" + cameras[i].name,
+                datetime=datetime.now(),  # .strftime('%Y-%m-%d %H:%M:%S'),
+                enabled=1  # Здесь 1 означает, что событие включено
+            )
+
+            # Добавьте объект события в сессию и сделайте commit
+            session.add(new_event)
+            session.commit()
+        time_difference = datetime.now() - time_d
+        # Извлекаем количество часов, минут и секунд из разницы во времени
+        hours, remainder = divmod(time_difference.total_seconds(), 3600)  # 3600 секунд в часе
+        minutes, seconds = divmod(remainder, 60)
+        print(cameras[i].name, f"Количество minut: {int(minutes)} seconds: {int(seconds)}")
 
     # for status_name, update_function in status_functions.items():
     #     update_function(session,random.randint(0, 1))
-    print("Статусы обновлены.")
-    await asyncio.sleep(random.uniform(0.5, 5.0))
+    database_entry(cameras)
+    time_difference = datetime.now() - time_d
+    # Извлекаем количество часов, минут и секунд из разницы во времени
+    hours, remainder = divmod(time_difference.total_seconds(), 3600)  # 3600 секунд в часе
+    minutes, seconds = divmod(remainder, 60)
+    print("Статусы обновлены", f"Количество minut: {int(minutes)} seconds: {int(seconds)}")
+    await asyncio.sleep(random.uniform(0.01, 0.01))
 
 async def tuning_statuses_async(session):
     # Функция 2: асинхронное обновление флагов в соответствии с логикой
