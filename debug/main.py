@@ -8,7 +8,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import update
 from sqlalchemy.orm import sessionmaker
 import asyncio
-from debug.bd_function import Statys
+from debug.bd_function import ORM_Statys, database_entry
+from debug.bd_function import read_from_database
 # # Создание базового класса моделей для SQLAlchemy
 # Base = declarative_base()
 #
@@ -31,7 +32,7 @@ def update_password_status(session: Session, new_status: int):
     try:
         # Ищем запись с именем 'password' и обновляем флаг
 
-        session.query(Statys).filter_by(name='password').update({'flag': new_status})
+        session.query(ORM_Statys).filter_by(name='password').update({'flag': new_status})
         session.commit()
         print("Статус пароля обновлен успешно.")
     except Exception as e:
@@ -43,7 +44,7 @@ def update_guid_status(session: Session, new_status: int):
 
     try:
         # Ищем запись с именем 'guid' и обновляем флаг
-        session.query(Statys).filter_by(name='guid').update({'flag': new_status})
+        session.query(ORM_Statys).filter_by(name='guid').update({'flag': new_status})
         session.commit()
         print("Статус GUID обновлен успешно.")
     except Exception as e:
@@ -55,15 +56,25 @@ status_functions = {
     'password': update_password_status,
     'guid': update_guid_status
 }
-async def update_statuses_async(session):
-    for status_name, update_function in status_functions.items():
-        update_function(session,random.randint(0, 1))
+async def all_camera(session, cameras):
+
+    from debug.rotate.main import one_step
+    for i in range(len(cameras)):
+        cameras[i] = one_step(cameras[i])
+        if not cameras[i].content_type:
+            print("cameras[i].content_type")
+
+        database_entry(cameras)
+        print("все камеры")
+
+    # for status_name, update_function in status_functions.items():
+    #     update_function(session,random.randint(0, 1))
     print("Статусы обновлены.")
     await asyncio.sleep(random.uniform(0.5, 5.0))
 
 async def tuning_statuses_async(session):
     # Функция 2: асинхронное обновление флагов в соответствии с логикой
-    rows = session.query(Statys).all()
+    rows = session.query(ORM_Statys).all()
     for row in rows:
         # Проверяем флаг и вызываем соответствующую функцию
         if row.flag == 0:
@@ -75,8 +86,9 @@ async def tuning_statuses_async(session):
 
     # Основной асинхронный цикл
 async def main_async(session):
+    cameras = read_from_database()
     while True:
-        await update_statuses_async(session)
+        await all_camera(session, cameras)
         await tuning_statuses_async(session)
         # Вызываем функции для обновления статусов
 
