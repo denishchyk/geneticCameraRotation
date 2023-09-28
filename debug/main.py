@@ -1,4 +1,5 @@
 from datetime import datetime
+import time
 import concurrent.futures
 from Private_setting import bd_name
 
@@ -58,7 +59,7 @@ status_functions = {
     'password': update_password_status,
     'guid': update_guid_status
 }
-async def all_camera(session, cameras):
+def all_camera(session, cameras):
 
     from debug.rotate.main import one_step
     time_d = datetime.now()
@@ -70,9 +71,8 @@ async def all_camera(session, cameras):
     def update_camera_data(time_d,cameras):
         results, ewent  = [], []
         for i in range(len(cameras)):
-
-            cameras[i] = one_step(cameras[i])
-            if not cameras[i].turn:
+            t = one_step(cameras[i])
+            if not t.turn:
                 new_event = ORM_Event(
                     name="Поворот" + cameras[i].name,
                     datetime=datetime.now(),  # .strftime('%Y-%m-%d %H:%M:%S'),
@@ -82,12 +82,12 @@ async def all_camera(session, cameras):
                 # Добавьте объект события в сессию и сделайте commit
                 ewent.append(new_event)
 
-            time_difference = datetime.now() - time_d
-            # Извлекаем количество часов, минут и секунд из разницы во времени
-            hours, remainder = divmod(time_difference.total_seconds(), 3600)  # 3600 секунд в часе
-            minutes, seconds = divmod(remainder, 60)
-            print(cameras[i].name, f"Количество minut: {int(minutes)} seconds: {int(seconds)}")
-            results.append(cameras[i])
+            # time_difference = datetime.now() - time_d
+            # # Извлекаем количество часов, минут и секунд из разницы во времени
+            # hours, remainder = divmod(time_difference.total_seconds(), 3600)  # 3600 секунд в часе
+            # minutes, seconds = divmod(remainder, 60)
+            # print(t.name, f"Количество minut: {int(minutes)} seconds: {int(seconds)}")
+            results.append(t)
         return (results, ewent)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
@@ -106,6 +106,7 @@ async def all_camera(session, cameras):
         # Ждем завершения всех потоков и получаем результаты
         combined_results = []
         for future in concurrent.futures.as_completed(all_results):
+            # print("future.result()", future.result())
             combined_results.extend(future.result())
 
 
@@ -125,9 +126,9 @@ async def all_camera(session, cameras):
     hours, remainder = divmod(time_difference.total_seconds(), 3600)  # 3600 секунд в часе
     minutes, seconds = divmod(remainder, 60)
     print("Статусы обновлены", f"Количество minut: {int(minutes)} seconds: {int(seconds)}")
-    await asyncio.sleep(random.uniform(0.01, 0.01))
+    time.sleep(random.uniform(1.01, 0.01))
 
-async def tuning_statuses_async(session):
+def tuning_statuses_async(session):
     # Функция 2: асинхронное обновление флагов в соответствии с логикой
     rows = session.query(ORM_Statys).all()
     for row in rows:
@@ -137,17 +138,20 @@ async def tuning_statuses_async(session):
             print(row.name,status_functions.get(row.name))
             func(session, 1)
     print("Починили статусы")
-    await asyncio.sleep(5)  # Подождать 60 секунд перед следующей проверкой
+    time.sleep(5)  # Подождать 60 секунд перед следующей проверкой
 
     # Основной асинхронный цикл
-async def main_async(session):
+def main_async(session):
     cameras = read_from_database()
+    #print("cameras",cameras)
     while True:
-        await all_camera(session, cameras)
-        await tuning_statuses_async(session)
+        all_camera(session, cameras)
+        #print("cameras",cameras)
+        # tuning_statuses_async(session)
         # Вызываем функции для обновления статусов
 
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main_async(session))
+    main_async(session)
+    # loop = asyncio.get_event_loop()
+    # loop.run_until_complete(main_async(session))

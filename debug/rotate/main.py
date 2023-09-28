@@ -18,7 +18,7 @@ def one_step(camera):
         camera.angle = abs(
             angle_of_rotation.calculate_rotation_angle(camera.old, yang, matches)) if camera.keypoint_count > 0 else 0
         camera.turn = camera.angle < Private_setting.threshold
-        print(f"угол поворота {camera.angle}")
+        # print(f"угол поворота {camera.angle}")
         if camera.turn:
 
             next_generation = genetics.STEP3_crossover(yang, camera.old, matches) + genetics.STEP4_selection(yang, matches)
@@ -29,7 +29,7 @@ def one_step(camera):
 
             next_generation = genetics.STEP3_crossover(yang, camera.old, matches) + genetics.STEP4_selection(yang,matches)
             camera.old = [chromosome for chromosome in next_generation if chromosome.fitness > 1]
-            (print("((((("))
+            # (print("((((("))
         for i in camera.old:
             i.fitness -= 1
             #i.save_to_database(name)

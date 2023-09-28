@@ -62,14 +62,52 @@ def get_guid():
     return json.loads(response.content)
 
 
-def get_img(guid):
-    api_url = f"http://{Private_setting.ip}/screenshot/{guid}?password={Private_setting.password}"
-    print(api_url)
-    response = requests.get(api_url, verify=False)
-    # TODO response.status_code == 200 как обрабатывать
-    if response.status_code == 200:
-        if 'image' in response.headers.get('Content-Type'):
-             return True,response.content
-        else: return True, False
-    else:
-        return False, False
+# def get_img(guid):
+#     api_url = f"http://{Private_setting.ip}/screenshot/{guid}?password={Private_setting.password}"
+#     print(api_url)
+#     try:
+#         response = requests.get(api_url, stream=True, verify=False)
+#         # TODO response.status_code == 200 как обрабатывать
+#         if response.status_code == 200:
+#             if 'image' in response.headers.get('Content-Type'):
+#                 # Считываем данные по частям и сохраняем их в буфер
+#                 img_data = b""
+#                 for chunk in response.iter_content(chunk_size=1024):
+#                     img_data += chunk
+#                 return True, img_data
+#             else:
+#                 return True, False
+#         else:
+#             return False, False
+#     except Exception as e:
+#         print(f"\tОшибка при получении изображения: {str(e)}")
+#         return False, False
+
+
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+# Создаем сессию с настройками повторных попыток
+
+# Функция для получения изображения с настройками повторных попыток
+def get_img(camera):
+    api_url = f"http://{Private_setting.ip}/screenshot/{camera}?password={Private_setting.password}"
+    max_retries = 3  # Количество попыток
+    for _ in range(max_retries):
+        try:
+            response = requests.get(api_url, timeout=30)
+            response.raise_for_status()
+            if 'image' in response.headers.get('Content-Type'):
+                print(f"опытка номер {_}\t ")
+                return True, response.content
+            else:
+                print(f"return True, False")
+                return True, False
+        except requests.exceptions.RequestException as e: pass
+            # print(f"Ошибка при запросе изображения для камеры {_}: {str(e)}")
+
+    # Если не удалось получить изображение после множества попыток, верните False
+    print(f"требовалось больше чем {max_retries}\t ")
+    return False, False
+
+
