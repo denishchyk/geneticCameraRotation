@@ -1,45 +1,66 @@
-import cv2
-import numpy as np
-import requests
-
-import Private_setting
-
-import aiohttp
 import asyncio
+import aiohttp
+import os
+from datetime import datetime, timedelta
+import threading
 
-async def fetch_url(url):
-    async with aiohttp.ClientSession() as session:
+# URL для скачивания
+url = "https://w.forfun.com/fetch/fa/fa42c1c2a72af7fad3f7b1edb0d09721.jpeg"
+
+# Папка для сохранения изображений
+image_folder = "./piktures"
+
+# Создание папки для сохранения изображений, если она не существует
+if not os.path.exists(image_folder):
+    os.makedirs(image_folder)
+
+# Функция для скачивания изображения по URL с использованием aiohttp
+async def download_image(session):
+    try:
         async with session.get(url) as response:
-            print("response.content",response.content)
+            if response.status == 200:
+                image_data = await response.read()
+                # Генерируем имя файла с текущей датой и временем
+                current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                filename = os.path.join(image_folder, f"{current_time}.jpg")
+                with open(filename, "wb") as f:
+                    f.write(image_data)
+                print(f"Скачано: {filename}")
+            else:
+                print(f"Ошибка при скачивании изображения {url}: {response.status}")
+    except Exception as e:
+        print(f"Ошибка при скачивании изображения {url}: {str(e)}")
+
+# Функция для удаления устаревших изображений
+def cleanup_image_folder():
+    while True:
+        current_time = datetime.now()
+        for filename in os.listdir(image_folder):
+            file_path = os.path.join(image_folder, filename)
             try:
-                data = await response.read()
-            except aiohttp.ClientPayloadError as e:
-                print(f"ClientPayloadError: {e}")
-                data = b''  # Пустые данные в случае ошибки
-            return data
+                # Получаем дату и время из названия файла
+                name, file_time = filename.rsplit('_', 1)
+                file_time = datetime.strptime(filename, "%Y-%m-%d_%H-%M-%S.jpg")
+                # Если файл старше 15 минут, удаляем его
+                if current_time - file_time > timedelta(minutes=2):
+                    os.remove(file_path)
+                    print(f"Удалено устаревшее изображение:{filename}")
+            except ValueError:
+                pass  # Пропускаем файлы с неверным форматом имени
 
-async def run_requests(url, num_requests):
-    tasks = [fetch_url(url) for _ in range(num_requests)]
-    responses = await asyncio.gather(*tasks)
-    return responses
-
+# Запускаем асинхронный цикл для скачивания изображений
 async def main():
-    url = "http://localhost:5000/screenshot/Aqi3PH68?password=masha"
-    num_requests_per_thread = 10
-    num_threads = 5
-    total_requests = num_requests_per_thread * num_threads
+    while True:
+        async with aiohttp.ClientSession() as session:
+            await download_image(session)
+            await asyncio.sleep(1)  # Подождать 1 секунду между скачиваниями
 
-    thread_tasks = [run_requests(url, num_requests_per_thread) for _ in range(num_threads)]
+if __name__ == '__main__':
+    # Запускаем бесконечный цикл скачивания и удаления изображений в отдельном потоке
+    cleanup_thread = threading.Thread(target=cleanup_image_folder)
+    cleanup_thread.daemon = True
+    cleanup_thread.start()
 
-    thread_responses = await asyncio.gather(*thread_tasks)
-
-    # Сохраняем бинарные данные изображений в массив
-    image_data_array = []
-    for responses in thread_responses:
-        for response in responses:
-            image_data_array.append(response)
-
-    # Теперь image_data_array содержит бинарные данные всех загруженных изображений
-
-if __name__ == "__main__":
-    asyncio.run(main())
+    # Запускаем асинхронный цикл для скачивания изображений
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
