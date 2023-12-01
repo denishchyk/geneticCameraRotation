@@ -34,7 +34,6 @@ session = Session()
 def update_password_status(session: Session, new_status: int):
     try:
         # Ищем запись с именем 'password' и обновляем флаг
-
         session.query(ORM_Statys).filter_by(name='password').update({'flag': new_status})
         session.commit()
         print("Статус пароля обновлен успешно.")

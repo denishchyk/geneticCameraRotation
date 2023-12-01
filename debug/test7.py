@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 url = "https://w.forfun.com/fetch/fa/fa42c1c2a72af7fad3f7b1edb0d09721.jpeg"
 
 # Список имен для запросов
-names = [f"Камера_{i}" for i in range(50)]
+names = [f"Камера_{i}" for i in range(52)]
 
 # Максимальное количество одновременных загрузок
 max_concurrent_downloads = 5
@@ -113,6 +113,20 @@ async def main():
         # Заполняем очередь именами из списка names
         for i in range(len(names)//max_concurrent_downloads):
             for name in names[i * 5 : (i + 1) * 5]:
+                queue.put_nowait(name)
+
+            tasks = []
+            # Запускаем несколько задач для асинхронного скачивания изображений
+            task = asyncio.create_task(download_images(queue))
+            tasks.append(task)
+
+            # Ожидаем завершения всех задач
+            await asyncio.gather(*tasks)
+            await queue.join()
+
+        ostatok = len(names)%max_concurrent_downloads
+        if ostatok:
+            for name in names[-ostatok:]:
                 queue.put_nowait(name)
 
             tasks = []

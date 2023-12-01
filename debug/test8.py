@@ -109,8 +109,6 @@ def all_camera(session, cameras):
             # print("future.result()", future.result())
             combined_results.extend(future.result())
 
-
-
     # for status_name, update_function in status_functions.items():
     #     update_function(session,random.randint(0, 1))
     # print(combined_results)
